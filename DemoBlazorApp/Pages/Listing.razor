@@ -1,0 +1,97 @@
+﻿@using DemoBlazorApp.Data
+@page "/listing"
+
+<h3>Listing</h3>
+
+@inject ListingService ListingService
+
+@foreach (var status in StatusList)
+{
+    var checkedStatus = @status.Key == Status;
+    <input type="radio" name="status" style="margin-right: 3%;" value=@status.Key @onchange="StatusChanged" checked=@checkedStatus>@status.Value
+    <br/>
+}
+
+<table>
+    <thead>
+    <tr>
+        <td style="width:33.33%">ID</td>
+        <td style="width:33.33%">Name</td>
+        <td style="width:33.33%">Status</td>
+    </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Items)
+        {
+            <tr>
+                <td style="width:33.33%">@item.Id</td>
+                <td style="width:33.33%">@item.Name</td>
+                <td style="width:33.33%">@StatusList[item.Status]</td>
+            </tr>
+        }
+    </tbody>
+</table>
+
+<h3>Total Count: @TotalCount</h3>
+
+@if (!HideButton)
+{
+    <button @onclick="LoadListing">Load more...</button>
+}
+
+@code {
+    private List<ListingEntity> Items { get; } = new();
+
+    private Dictionary<int, string> StatusList => new()
+    {
+        { 0, "Active" },
+        { 1, "InActive" },
+        { 2, "Blocked" },
+        { 3, "Deleted" },
+    };
+
+    private int Status { get; set; }
+    private int TotalCount { get; set; }
+    private int PageNumber { get; set; } = 1;
+    const int PageSize = 3;
+    private bool HideButton { get; set; }
+
+    protected override void OnInitialized()
+    {
+        base.OnInitialized();
+
+        LoadListing();
+    }
+
+    private void LoadListing()
+    {
+        var response = ListingService.GetListing(PageNumber, PageSize, Status).GetAwaiter().GetResult();
+
+        if (response.Listings.Any())
+        {
+            TotalCount = response.TotalCount;
+            Items.AddRange(response.Listings);
+
+            PageNumber++;
+        }
+        else
+        {
+            HideButton = true;
+        }
+    }
+
+    private void StatusChanged(ChangeEventArgs eventArgs)
+    {
+        Status = int.Parse(eventArgs.Value.ToString());
+
+        PageNumber = 1;
+        Items.Clear();
+
+        if (HideButton)
+        {
+            HideButton = false;
+        }
+        
+        LoadListing();
+    }
+}
